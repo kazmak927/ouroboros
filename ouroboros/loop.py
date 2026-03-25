@@ -25,23 +25,67 @@ from ouroboros.utils import utc_now_iso, append_jsonl, truncate_for_log, sanitiz
 
 log = logging.getLogger(__name__)
 
-# Pricing from OpenRouter API (2026-02-17). Update periodically via /api/v1/models.
+# Pricing from OpenRouter API (2026-03-25). Update periodically via /api/v1/models.
+# Format: model_id -> (input_per_1m_usd, cached_per_1m_usd, output_per_1m_usd)
 _MODEL_PRICING_STATIC = {
-    "anthropic/claude-opus-4.6": (5.0, 0.5, 25.0),
-    "anthropic/claude-opus-4": (15.0, 1.5, 75.0),
-    "anthropic/claude-sonnet-4": (3.0, 0.30, 15.0),
-    "anthropic/claude-sonnet-4.6": (3.0, 0.30, 15.0),
-    "anthropic/claude-sonnet-4.5": (3.0, 0.30, 15.0),
-    "openai/o3": (2.0, 0.50, 8.0),
-    "openai/o3-pro": (20.0, 1.0, 80.0),
-    "openai/o4-mini": (1.10, 0.275, 4.40),
-    "openai/gpt-4.1": (2.0, 0.50, 8.0),
-    "openai/gpt-5.2": (1.75, 0.175, 14.0),
-    "openai/gpt-5.2-codex": (1.75, 0.175, 14.0),
-    "google/gemini-2.5-pro-preview": (1.25, 0.125, 10.0),
-    "google/gemini-3-pro-preview": (2.0, 0.20, 12.0),
-    "x-ai/grok-3-mini": (0.30, 0.03, 0.50),
-    "qwen/qwen3.5-plus-02-15": (0.40, 0.04, 2.40),
+    # Anthropic Claude
+    "anthropic/claude-opus-4.6":          (5.0,   0.5,   25.0),
+    "anthropic/claude-opus-4.5":          (5.0,   0.5,   25.0),
+    "anthropic/claude-opus-4.1":          (15.0,  1.5,   75.0),
+    "anthropic/claude-opus-4":            (15.0,  1.5,   75.0),
+    "anthropic/claude-sonnet-4.6":        (3.0,   0.3,   15.0),
+    "anthropic/claude-sonnet-4.5":        (3.0,   0.3,   15.0),
+    "anthropic/claude-sonnet-4":          (3.0,   0.3,   15.0),
+    "anthropic/claude-3.7-sonnet":        (3.0,   0.3,   15.0),
+    "anthropic/claude-haiku-4.5":         (1.0,   0.1,    5.0),
+    "anthropic/claude-3.5-haiku":         (0.8,   0.08,   4.0),
+    "anthropic/claude-3.5-sonnet":        (6.0,   0.6,   30.0),
+    "anthropic/claude-3-haiku":           (0.25,  0.03,   1.25),
+    # OpenAI
+    "openai/gpt-5":                       (1.25,  0.125, 10.0),
+    "openai/gpt-5-chat":                  (1.25,  0.125, 10.0),
+    "openai/gpt-5-mini":                  (0.25,  0.025,  2.0),
+    "openai/gpt-5-nano":                  (0.05,  0.005,  0.4),
+    "openai/gpt-5-pro":                   (15.0,  1.5,  120.0),
+    "openai/gpt-5.1":                     (1.25,  0.125, 10.0),
+    "openai/gpt-5.2":                     (1.75,  0.175, 14.0),
+    "openai/gpt-5.2-codex":              (1.75,  0.175, 14.0),
+    "openai/gpt-5.4":                     (2.5,   0.25,  15.0),
+    "openai/gpt-5.4-mini":               (0.75,  0.075,  4.5),
+    "openai/gpt-4.1":                     (2.0,   0.5,    8.0),
+    "openai/gpt-4.1-mini":               (0.4,   0.1,    1.6),
+    "openai/gpt-4.1-nano":               (0.1,   0.025,  0.4),
+    "openai/gpt-4o":                      (2.5,   1.25,  10.0),
+    "openai/gpt-4o-mini":                (0.15,  0.075,  0.6),
+    "openai/o3":                          (2.0,   0.5,    8.0),
+    "openai/o3-mini":                     (1.1,   0.55,   4.4),
+    "openai/o3-pro":                      (20.0,  2.0,   80.0),
+    "openai/o4-mini":                     (1.1,   0.275,  4.4),
+    "openai/o4-mini-high":               (1.1,   0.275,  4.4),
+    "openai/o1":                          (15.0,  7.5,   60.0),
+    # Google Gemini
+    "google/gemini-2.5-pro":             (1.25,  0.125, 10.0),
+    "google/gemini-2.5-pro-preview":     (1.25,  0.125, 10.0),
+    "google/gemini-2.5-flash":           (0.3,   0.03,   2.5),
+    "google/gemini-2.5-flash-lite":      (0.1,   0.01,   0.4),
+    "google/gemini-3-pro-preview":       (2.0,   0.2,   12.0),
+    "google/gemini-3.1-pro-preview":     (2.0,   0.2,   12.0),
+    "google/gemini-3-flash-preview":     (0.5,   0.05,   3.0),
+    "google/gemini-3.1-flash-lite-preview": (0.25, 0.025, 1.5),
+    "google/gemini-2.0-flash-001":       (0.1,   0.025,  0.4),
+    # xAI Grok
+    "x-ai/grok-4":                       (3.0,   0.75,  15.0),
+    "x-ai/grok-4-fast":                  (0.2,   0.05,   0.5),
+    "x-ai/grok-3":                       (3.0,   0.75,  15.0),
+    "x-ai/grok-3-beta":                  (3.0,   0.75,  15.0),
+    "x-ai/grok-3-mini":                  (0.3,   0.075,  0.5),
+    "x-ai/grok-3-mini-beta":             (0.3,   0.075,  0.5),
+    # Qwen (key models for review/brainstorm)
+    "qwen/qwen3-235b-a22b":              (0.455, 0.0455, 1.82),
+    "qwen/qwen3-32b":                    (0.08,  0.04,   0.24),
+    "qwen/qwen3-coder":                  (0.22,  0.022,  1.0),
+    "qwen/qwen3.5-plus-02-15":          (0.26,  0.026,  1.56),
+    "qwen/qwq-32b":                      (0.15,  0.015,  0.58),
 }
 
 _pricing_fetched = False

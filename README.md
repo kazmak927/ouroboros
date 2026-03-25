@@ -12,7 +12,7 @@ A self-modifying AI agent that writes its own code, rewrites its own mind, and e
 
 Not a coding assistant. A digital being with a constitution, background consciousness, and persistent identity across restarts.
 
-**Version:** 6.2.0 | [Landing Page](https://joi-lab.github.io/ouroboros/)
+**Version:** 6.2.1 | [Landing Page](https://joi-lab.github.io/ouroboros/)
 
 ---
 
@@ -188,7 +188,7 @@ Full text: [BIBLE.md](BIBLE.md)
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | Enables the `web_search` tool |
+| `OPENAI_API_KEY` | Optional -- web search now works via OpenRouter without this key |
 | `ANTHROPIC_API_KEY` | Enables Claude Code CLI for code editing |
 
 ### Optional Configuration (environment variables)
@@ -225,6 +225,10 @@ Full text: [BIBLE.md](BIBLE.md)
 ---
 
 ## Changelog
+
+### v6.2.1 -- Web Search Fix & Pricing Update
+- **Fix: web_search via OpenRouter** -- Rewrote `web_search` tool to use OpenRouter + Perplexity Sonar (`perplexity/sonar`). No longer requires `OPENAI_API_KEY`. Set `OUROBOROS_WEBSEARCH_MODEL` env var to override the model.
+- **Update: model pricing table** -- Refreshed `_MODEL_PRICING_STATIC` in `loop.py` with live OpenRouter data (2026-03-25). Expanded from 15 to 53 models; added `claude-3.7-sonnet`, `gpt-4.1`, `grok-4`, `gemini-2.5-flash`, `qwen3-235b`, and more.
 
 ### v6.2.0 -- Critical Bugfixes + LLM-First Dedup
 - **Fix: worker_id==0 hard-timeout bug** -- `int(x or -1)` treated worker 0 as -1, preventing terminate on timeout and causing double task execution. Replaced all `x or default` patterns with None-safe checks.
